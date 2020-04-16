@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>ChatRoom</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB"
+          crossorigin="anonymous">
+</head>
+<style>
+    body {
+        background-image: url('https://i.pinimg.com/236x/51/ed/c0/51edc046eb80046ee4755ee71d0f19ca--smartphone.jpg');
+    }
+
+    .background {
+        background-color: lightblue;
+    }
+
+    .height {
+        height: 300px;
+        max-height: 300px;
+        overflow: auto;
+    }
+
+    .height::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .height::-webkit-scrollbar-track {
+        background: #ddd;
+    }
+
+    .height::-webkit-scrollbar-thumb {
+        background: #aaa;
+    }
+
+    /*.maxWidth {*/
+    /*    width: 100%;*/
+    /*    max-width: 100%;*/
+    /*    overflow: hidden;*/
+    /*}*/
+
+    .time {
+        display: block;
+        font-size: 0.8em;
+    }
+
+</style>
+
+<body>
+<div class="container" id="app">
+    <div class="col-md-4 col-lg-6 offset-lg-3 offset-md-4">
+        <div v-if="ready">
+            <h4>Hello {{name}}</h4>
+            <div v-for="item in info">
+                <p>{{item.name}} {{item.type}}</p>
+            </div>
+        </div>
+        <div class="card mt-3 background" v-else>
+            <form @submit.prevent="setName" class="mt-4 card-body">
+                <h4>Welcome to Chatgram</h4>
+                <div class="form-group row card-body">
+                    <input type="text" class="form-control col-9" v-model="name" placeholder="Enter your name">
+                    <input type="submit" value="Log in" class="btn btn-lg btn-info ml-1">
+                </div>
+                <p class="text-danger text-center" v-if="feedbackForLogIn">{{feedbackForLogIn}}</p>
+            </form>
+        </div>
+        <div class="card bg-info" v-if="ready">
+            <div class="card-header text-white">
+                Chatgram |
+                <small v-if="typing" class="text-white">
+                    <i>{{typing}} is typing</i>
+                </small>
+                <span class="float-right">{{connectionCount}} connections, {{online.length}} Online</span>
+            </div>
+
+            <ul class="list-group list-group-flush text-right height" id="list">
+                <li class="list-group-item maxWidth" v-for="message in messages">
+                        <span v-if="message.type === 1" :class="{'float-left text-left':(message.type===1)}">
+                              <small class="text-info">{{message.by}}:</small>
+                            {{message.message}}
+                            <span class="time">
+                                {{message.time}}
+                            </span>
+                        </span>
+                    <span v-else :class="{'float-right':(message.type===1)}">
+                            {{message.message}}
+                           <small class="text-info">:{{message.by}}</small>
+                        <span class="time">
+                                {{message.time}}
+                            </span>
+                        </span>
+                </li>
+            </ul>
+
+            <div class="card-body">
+                <form @submit.prevent="send">
+                    <div class="form-group">
+                        <input type="text" class="form-control" v-model="newmessage"
+                               placeholder="Message(press enter to send)">
+                    </div>
+                    <p class="bg-warning text-center" v-if="feedbackForSend">{{feedbackForSend}}</p>
+                </form>
+            </div>
+
+        </div>
+    </div>
+    <!--    <button @click="">all connected</button>-->
+</div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+<script>
+    var socket = io();
+    let app = new Vue({
+        el: '#app',
+        data: {
+            newmessage: null,
+            messages: [],
+            time: null,
+            typing: false,
+            online: [],
+            name: null,
+            ready: false,
+            info: [],
+            usersTyping: [],
+            connectionCount: 0,
+            feedbackForLogIn: null,
+            feedbackForSend: null
+        },
+        methods: {
+            send() {
+                if (this.newmessage === null || this.newmessage === '') {
+                    this.feedbackForSend = "don't be shy say something :)"
+                } else {
+                    this.feedbackForSend = null;
+                    let tempTime = new Date().toUTCString();
+                    socket.emit('chat-message', {message: this.newmessage, user: this.name, time: tempTime});
+                    this.messages.push({message: this.newmessage, type: 0, by: 'Me', time: tempTime});
+                    this.newmessage = null;
+                }
+            },
+            setName() {
+                if (this.name === null || this.name === '') {
+                    this.feedbackForLogIn = "could you tell me your name? ;)"
+                } else {
+                    this.feedbackForLogIn = null;
+                    socket.emit('joined', this.name);
+                    this.ready = true
+                }
+            },
+        },
+        watch: {
+            newmessage(value) {
+                value ? socket.emit('typing', this.name) : socket.emit('stoptyping')
+            }
+        },
+        updated() {
+            if (document.getElementById('list') === null) {
+            } else {
+                document.getElementById('list').scrollTop = 9999999;
+            }
+        },
+        created() {
+            window.onbeforeunload = () => {
+                socket.emit('leaved', this.name)
+            }
+            socket.on('noOfConnections', (count) => {
+                this.connectionCount = count
+            })
+            socket.on('chat-message', (data) => {
+                this.messages.push({message: data.message, type: 1, by: data.user, time: data.time});
+                this.typing = false;
+            })
+
+            socket.on('typing', (data) => {
+                this.typing = data
+            })
+            socket.on('stoptyping', () => {
+                this.typing = false
+            })
+
+            socket.on('leaved', (name) => {
+                this.online.splice(this.online.indexOf(name))
+                this.info.push({name: name, type: 'Leaved'})
+                setTimeout(() => {
+                    this.info = []
+                }, 7000);
+            })
+
+            socket.on('joined', (name) => {
+                this.online.push(name)
+                this.info.push({name: name, type: 'Joined'})
+                setTimeout(() => {
+                    this.info = []
+                }, 7000);
+            });
+        }
+    });
+</script>
+</body>
+
+</html>
