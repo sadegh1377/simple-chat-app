@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>ChatRoom</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- add bootstrap cdn -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB"
           crossorigin="anonymous">
@@ -19,10 +20,16 @@
         background-color: lightblue;
     }
 
+    .mainDiv {
+        background-color: #00b0ff;
+    }
+
     .height {
         height: 300px;
         max-height: 300px;
         overflow: auto;
+        position: relative;
+        z-index: 0;
     }
 
     .height::-webkit-scrollbar {
@@ -37,49 +44,169 @@
         background: #aaa;
     }
 
-    /*.maxWidth {*/
-    /*    width: 100%;*/
-    /*    max-width: 100%;*/
-    /*    overflow: hidden;*/
-    /*}*/
+    .maxWidth {
+        position: relative;
+        z-index: 1;
+    }
 
     .time {
         display: block;
         font-size: 0.8em;
     }
 
+    .anchor {
+        cursor: pointer;
+        border: 1px solid transparent;
+        padding: .75rem 2rem;
+        font-size: 1rem;
+        border-radius: .25rem;
+        color: #fff;
+        font-weight: bold;
+        background-color: #0075AA;
+    }
+
+    .anchor::after {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        vertical-align: .255em;
+        content: "";
+    }
+
+    .menu {
+        background-color: #B1E0E7;
+        background-clip: padding-box;
+        border: 1px solid rgba(0, 0, 0, .15);
+        border-radius: .25rem;
+        color: #212529;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        font-size: 1rem;
+        list-style: none;
+        margin: .125rem 0 0;
+        padding: .5rem 0;
+        position: absolute;
+        text-align: left;
+    }
+
+    .menu-item {
+        color: #212529;
+        padding: .25rem 1.5rem;
+        position: relative;
+        z-index: 10;
+        background-color: #B1E0E7;
+
+    }
+
+    .menu-item:hover {
+        background-color: #F4F6F6;
+        cursor: pointer;
+    }
+
+    /*.tickImg {*/
+    /*    width: 30PX;*/
+    /*    height: 40px;*/
+    /*}*/
+
 </style>
 
 <body>
+
 <div class="container" id="app">
+    <!--the main container-->
     <div class="col-md-4 col-lg-6 offset-lg-3 offset-md-4">
+        <!-- the div that shows the name of the person that log in to chatroom         -->
         <div v-if="ready">
             <h4>Hello {{name}}</h4>
+            <!-- this div shows name of those are leaving or joining to chatroom        -->
             <div v-for="item in info">
                 <p>{{item.name}} {{item.type}}</p>
             </div>
         </div>
+        <!--  the loging div  -->
         <div class="card mt-3 background" v-else>
             <form @submit.prevent="setName" class="mt-4 card-body">
                 <h4>Welcome to Chatgram</h4>
                 <div class="form-group row card-body">
+                    <!--  The user enters his/her name in this field   -->
                     <input type="text" class="form-control col-9" v-model="name" placeholder="Enter your name">
                     <input type="submit" value="Log in" class="btn btn-lg btn-info ml-1">
                 </div>
+                <!--  this paragraph only display when the input field is empty  -->
                 <p class="text-danger text-center" v-if="feedbackForLogIn">{{feedbackForLogIn}}</p>
             </form>
         </div>
-        <div class="card bg-info" v-if="ready">
+
+        <!-- div of all public messages -->
+        <div class="card mainDiv" v-if="ready">
             <div class="card-header text-white">
-                Chatgram |
+                <!-- this field show the online users -->
+                <span @click='showOnlines' class='anchor'>Online Users</span>
+                <!-- this field display only when the Online Users span clicked -->
+                <div v-if='showOnlineUsers' class='menu'>
+                    <div class='menu-item' v-for='item in onlineUsers' @click="toPrivate(item)">{{item}}
+                    </div>
+                </div>
+                <!-- this show the user that typing -->
                 <small v-if="typing" class="text-white">
-                    <i>{{typing}} is typing</i>
+                    <span>{{typing}} is typing</span>
                 </small>
+                <!-- this span display the number of connections and numbers of online users -->
                 <span class="float-right">{{connectionCount}} connections, {{online.length}} Online</span>
             </div>
-
+            <!-- the field that show the messages -->
             <ul class="list-group list-group-flush text-right height" id="list">
                 <li class="list-group-item maxWidth" v-for="message in messages">
+                    <!-- this span only display only when the sender of message is someone else -->
+                    <!-- this span is on the left -->
+                    <span v-if="message.type === 1" :class="{'float-left text-left':(message.type===1)}">
+                              <small class="text-info">{{message.by}}:</small>
+                            {{message.message}}
+                            <span class="time">
+                                {{message.time}}
+                            </span>
+                        </span>
+                    <!-- this span only display only when the sender of message is his/her self -->
+                    <!-- this span is on the right -->
+                    <span v-else :class="{'float-right':(message.type===1)}">
+                            {{message.message}}
+                        <span class="time">
+                                {{message.time}}
+                            </span>
+                        </span>
+                </li>
+            </ul>
+            <!-- the send div -->
+            <div class="card-body">
+                <form @submit.prevent="send">
+                    <div class="form-group">
+                        <!-- user enter his/her message here -->
+                        <input type="text" class="form-control" v-model="newMessage"
+                               placeholder="Message(press enter to send)">
+                    </div>
+                    <!--  this paragraph only display when the input field is empty  -->
+                    <p class="bg-warning text-center" v-if="feedbackForSend">{{feedbackForSend}}</p>
+                </form>
+            </div>
+
+        </div>
+        <br>
+        <!-- div of all Private messages -->
+        <div class="card bg-info" v-if="showPrivate">
+            <div class="card-header text-white">
+                <!-- the span close the private div -->
+                <span @click='disablePrivate' class='anchor'>Close</span>
+                <!-- display the user that is typing -->
+                <small v-if="privateTyping" class="text-white">
+                    <span>{{privateTyping}} is typing</span>
+                </small>
+                <span class="float-right">Private Chat</span>
+            </div>
+            <!-- the field that show the private messages -->
+            <!-- same as public section -->
+            <ul class="list-group list-group-flush text-right height" id="privateList">
+                <li class="list-group-item maxWidth" v-for="message in privateMessages">
                         <span v-if="message.type === 1" :class="{'float-left text-left':(message.type===1)}">
                               <small class="text-info">{{message.by}}:</small>
                             {{message.message}}
@@ -89,7 +216,6 @@
                         </span>
                     <span v-else :class="{'float-right':(message.type===1)}">
                             {{message.message}}
-                           <small class="text-info">:{{message.by}}</small>
                         <span class="time">
                                 {{message.time}}
                             </span>
@@ -97,111 +223,294 @@
                 </li>
             </ul>
 
+            <!-- same as public section -->
             <div class="card-body">
-                <form @submit.prevent="send">
+                <form @submit.prevent="privateSend">
                     <div class="form-group">
-                        <input type="text" class="form-control" v-model="newmessage"
+                        <input type="text" class="form-control" v-model="privateMessage"
                                placeholder="Message(press enter to send)">
                     </div>
-                    <p class="bg-warning text-center" v-if="feedbackForSend">{{feedbackForSend}}</p>
+                    <p class="bg-warning text-center" v-if="privateFeedbackForSend">{{privateFeedbackForSend}}</p>
                 </form>
             </div>
 
         </div>
     </div>
-    <!--    <button @click="">all connected</button>-->
 </div>
 
-
+<!-- import the socket.io files -->
 <script src="/socket.io/socket.io.js"></script>
+<!-- import the vue.js cdn framework -->
 <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
 <script>
+    // creat socket object
     var socket = io();
+    // initial Vue framework
     let app = new Vue({
-        el: '#app',
-        data: {
-            newmessage: null,
-            messages: [],
-            time: null,
-            typing: false,
-            online: [],
-            name: null,
-            ready: false,
-            info: [],
-            usersTyping: [],
-            connectionCount: 0,
-            feedbackForLogIn: null,
-            feedbackForSend: null
-        },
-        methods: {
-            send() {
-                if (this.newmessage === null || this.newmessage === '') {
-                    this.feedbackForSend = "don't be shy say something :)"
-                } else {
-                    this.feedbackForSend = null;
-                    let tempTime = new Date().toUTCString();
-                    socket.emit('chat-message', {message: this.newmessage, user: this.name, time: tempTime});
-                    this.messages.push({message: this.newmessage, type: 0, by: 'Me', time: tempTime});
-                    this.newmessage = null;
-                }
+            el: '#app',
+            // all the variable
+            data: {
+                name: null, // the name of user
+
+                newMessage: null, // for public new messages that user entered
+                messages: [], // this array hold all the public messages
+                typing: false, // to know who's typing
+
+                ready: false, // for shows the loging, show name div and div of public messages
+                info: [], // for saving the information about who leave or login
+
+                online: [],  // hold all online users
+                onlineUsers: null, // for display all online us
+                showOnlineUsers: false, // for displaying the online users list
+
+                connectionCount: 0, // number of connection
+                feedbackForLogIn: null, // feedback for login input
+                feedbackForSend: null, // feedback fot send message input
+
+                showPrivate: false, // for displaying the private div
+                privateMessage: null, // for private new messages that user entered
+                privateMessages: [], // this array hold all the private messages
+                privateTyping: false, // to know who's typing
+                privateFeedbackForSend: null, // feedback fot send message input
+
+
             },
-            setName() {
-                if (this.name === null || this.name === '') {
-                    this.feedbackForLogIn = "could you tell me your name? ;)"
-                } else {
-                    this.feedbackForLogIn = null;
-                    socket.emit('joined', this.name);
-                    this.ready = true
+            // all the methods
+            methods: {
+                // this method set the name of the user and
+                // emit a socket io request to the server and
+                // if the name property is empty send feedback a message
+                setName() {
+                    if (this.name === null || this.name === '') {
+                        // set the feedback message
+                        this.feedbackForLogIn = "could you tell me your name? ;)"
+                    } else {
+                        // for disable the feedback message
+                        this.feedbackForLogIn = null;
+                        // socket io request
+                        socket.emit('joined', this.name);
+                        // for shows the loging, show name div and div of public messages
+                        this.ready = true
+                    }
+                },
+
+                // this method is for sending message
+                // after user press enter this method send
+                // a socket io request to the server
+                // that contain the message, name of user and
+                // time of when he/she send the message
+                // if the newMessage property is empty send feedback a message
+                send() {
+                    if (this.newMessage === null || this.newMessage === '') {
+                        // set the feedback message
+                        this.feedbackForSend = "don't be shy say something :)"
+                    } else {
+                        // for disable the feedback message
+                        this.feedbackForSend = null;
+                        // get the time
+                        let tempTime = new Date().toUTCString();
+                        // socket io request
+                        socket.emit('chatMessage', {message: this.newMessage, user: this.name, time: tempTime});
+                        // for showing the message in the user that send the message
+                        this.messages.push({message: this.newMessage, type: 0, by: 'Me', time: tempTime});
+                        // make newMessage null for an other typing again
+                        this.newMessage = null;
+                    }
+                },
+
+                // this method send the
+                // list of the online user
+                // to the server
+                showOnlines() {
+                    // socket io request
+                    socket.emit('onlineUsers', this.online);
+                    // for showing the online users section
+                    this.showOnlineUsers = !this.showOnlineUsers;
+                },
+
+                // the method is for entering to the private section
+                toPrivate(name) {
+                    // socket io request
+                    // that contain the name of the on who
+                    // that user wants to chat with
+                    socket.emit('startPrivate', name)
+                    // for displaying the private div
+                    this.showPrivate = true;
+                    // if someone new enters the private sector
+                    // they will not see the old messages
+                    this.privateMessages = [];
+                },
+
+                // this method just like public one
+                // but fot private section
+                privateSend() {
+                    if (this.privateMessage === null || this.privateMessage === '') {
+                        this.privateFeedbackForSend = "don't be shy say something :)"
+                    } else {
+                        this.privateFeedbackForSend = null;
+                        let tempTime = new Date().toUTCString();
+                        socket.emit('privateChatMessage', {message: this.privateMessage, user: this.name, time: tempTime});
+                        this.privateMessages.push({message: this.privateMessage, type: 0, by: 'Me', time: tempTime});
+                        this.privateMessage = null;
+                    }
+                },
+
+                // for closing the private div
+                disablePrivate() {
+                    this.showPrivate = false;
+                },
+
+            }
+            ,
+
+            // this watcher watch a property
+            // if that property chang this watcher takes action
+            watch: {
+                // for watching newMessage property
+                // if change emit typing to the sever
+                // else emit stop typing
+                newMessage(value) {
+                    value ? socket.emit('typing', this.name) : socket.emit('stoptyping')
+                },
+                // same as above
+                // but for private section
+                privateMessage(value) {
+                    value ? socket.emit('privateTyping', this.name) : socket.emit('privateStopTyping')
                 }
-            },
-        },
-        watch: {
-            newmessage(value) {
-                value ? socket.emit('typing', this.name) : socket.emit('stoptyping')
             }
-        },
-        updated() {
-            if (document.getElementById('list') === null) {
-            } else {
-                document.getElementById('list').scrollTop = 9999999;
+            ,
+            // this is a circle hook for vuejs
+            // if something in the dom chang this methos takes action
+            updated() {
+                // for make sure that the user always see the new message
+                // making the scroll always on stay on the bottom
+                if (document.getElementById('privateList') === null) {
+                } else {
+                    document.getElementById('privateList').scrollTop = 9999999;
+                }
+
+                // same as above
+                // but for private section
+                if (document.getElementById('list') === null) {
+                } else {
+                    document.getElementById('list').scrollTop = 9999999;
+                }
             }
-        },
-        created() {
-            window.onbeforeunload = () => {
-                socket.emit('leaved', this.name)
+            ,
+            // this is a circle hook for vuejs
+            // that run code after an instance is created
+            created() {
+                // for knowing that someone leaved
+                window.onbeforeunload = () => {
+                    // socket io request
+                    socket.emit('leaved', this.name)
+                };
+
+                // for listening to the joined answer
+                // that the serve send to client side
+                socket.on('joined', (name) => {
+                    // add the name the one who joint to the chat room to the online array
+                    this.online.push(name);
+                    // add information of the one who joint to the chat room to the info array
+                    this.info.push({name: name, type: 'Join the chatroom'});
+                    // set a timer to displaying only 7 second
+                    setTimeout(() => {
+                        this.info = [];
+                    }, 7000);
+                });
+
+                // for listening to the noOfConnections answer
+                // that the serve send to client side
+                socket.on('noOfConnections', (count) => {
+                    // count the number of connection
+                    this.connectionCount = count
+                });
+
+                // for listening to the chatMessage answer
+                // that the serve send to client side
+                socket.on('chatMessage', (data) => {
+                    // add message that the other users
+                    // typed to the messages array
+                    this.messages.push({message: data.message, type: 1, by: data.user, time: data.time});
+                    // to now the other users are not typing
+                    this.typing = false;
+                });
+
+
+                // for listening to the typing answer
+                // that the serve send to client side
+                socket.on('typing', (name) => {
+                    // to know who is typing
+                    this.typing = name
+                });
+
+
+                // for listening to the stoptyping answer
+                // that the serve send to client side
+                socket.on('stoptyping', () => {
+                    // to know who is stop typing
+                    this.typing = false
+                });
+
+                // for listening to the leaved answer
+                // that the serve send to client side
+                socket.on('leaved', (name) => {
+                    // remove the user the left the chatroom
+                    this.online.splice(this.online.indexOf(name));
+                    // add information of the one who leaved  the chatroom to the info array
+                    this.info.push({name: name, type: 'Leaved'});
+                    // set a timer to displaying only 7 second
+                    setTimeout(() => {
+                        this.info = []
+                    }, 7000);
+                });
+
+                // for listening to the onlineUsers answer
+                // that the serve send to client side
+                socket.on('onlineUsers', (online) => {
+                    // add online array to onlineUsers array
+                    this.onlineUsers = this.online;
+                })
+
+                // for listening to the startPrivate answer
+                // that the serve send to client side
+                socket.on('startPrivate', (name) => {
+                    // to make sure that the private section
+                    // only open for the right user
+                    if (this.name === name) {
+                        // to display the private div
+                        this.showPrivate = true;
+                        // if someone new enters the private sector
+                        // they will not see the old messages
+                        this.privateMessages = []
+                    }
+                })
+
+                // for listening to the privateChatMessage answer
+                // that the serve send to client side
+                // same as public
+                socket.on('privateChatMessage', (data) => {
+                    this.privateMessages.push({message: data.message, type: 1, by: data.user, time: data.time});
+                    this.privateTyping = false;
+                })
+
+                // for listening to the privateChatMessage answer
+                // that the serve send to client side
+                // same as public
+                socket.on('privateTyping', (data) => {
+                    this.privateTyping = data
+                })
+
+                // for listening to the privateChatMessage answer
+                // that the serve send to client side
+                // same as public
+                socket.on('privateStopTyping', () => {
+                    this.privateTyping = false
+                })
+
             }
-            socket.on('noOfConnections', (count) => {
-                this.connectionCount = count
-            })
-            socket.on('chat-message', (data) => {
-                this.messages.push({message: data.message, type: 1, by: data.user, time: data.time});
-                this.typing = false;
-            })
-
-            socket.on('typing', (data) => {
-                this.typing = data
-            })
-            socket.on('stoptyping', () => {
-                this.typing = false
-            })
-
-            socket.on('leaved', (name) => {
-                this.online.splice(this.online.indexOf(name))
-                this.info.push({name: name, type: 'Leaved'})
-                setTimeout(() => {
-                    this.info = []
-                }, 7000);
-            })
-
-            socket.on('joined', (name) => {
-                this.online.push(name)
-                this.info.push({name: name, type: 'Joined'})
-                setTimeout(() => {
-                    this.info = []
-                }, 7000);
-            });
-        }
-    });
+        })
+    ;
 </script>
 </body>
 
