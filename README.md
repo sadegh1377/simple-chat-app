@@ -10,4 +10,4 @@ node index.js // this will open a server on http://localhost:15000
 
 Enjoy
 ### note: 
-#### you should be online to work perfectly
+#### you should be online to it work perfectly
