@@ -9,7 +9,7 @@
   "author": "Sarthak Shrivastava <bitfumes@gmail.com> (https://bitfumes.com)",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.15.2",
+    "express": "^4.17.3",
     "socket.io": "^2.1.0"
   }
 }
